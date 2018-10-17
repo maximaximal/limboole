@@ -2,10 +2,11 @@
 
 echo "Create Linux Package."
 
-docker run --rm dockcross/linux-x64 > ./dockcross-linux-x64
-chmod +x dockcross-linux-x64
-./dockcross-linux-x64 cmake -Bbuild-linux-x64 -H. -DCMAKE_BUILD_TYPE=Release
-./dockcross-linux-x64 make -C build-linux-x64 package
+mkdir -p build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make package
+cd ..
 
 echo "Create Windows x64 Package."
 
@@ -24,7 +25,7 @@ chmod +x dockcross-windows-x32
 echo "Finished Creating Packages, copy to packages subfolder."
 mkdir -p packages
 
-cp ./build-linux-x64/packages/* ./packages
+cp ./build/packages/* ./packages
 cp ./build-windows-x64/packages/* ./packages
 cp ./build-windows-x32/packages/* ./packages
 
