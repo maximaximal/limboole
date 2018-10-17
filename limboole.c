@@ -1230,7 +1230,7 @@ limboole (int argc, char **argv)
 	}
       else if (!strcmp (argv[i], "--version"))
 	{
-	  fprintf (mgr->out, "%d\n", VERSION);
+	  fprintf (mgr->out, "%s\n", VERSION);
 	  done = 1;
 	}
       else if (!strcmp (argv[i], "-v"))
