@@ -1,0 +1,31 @@
+Overview
+--------
+
+This is a simple boolean calculator.  It reads a boolean formula and checks
+whether it is valid.  In case '-s' is specified satisfiability is checked
+instead of validity (tautology).
+
+Language
+--------
+
+The input format has the following syntax in BNF:
+( [ ... ] means optional,  { ... } means repeated arbitrary many times)
+   
+   expr ::= iff
+   iff ::= implies { '<->' implies }
+   implies ::= or [ '->' or | '<-' or ]
+   or ::= and { '|' and }
+   and ::= not { '&' not }
+   not ::= basic | '!' not
+   basic ::= var | '(' expr ')'
+
+and 'var' is a string over letters, digits and the following characters:
+  
+  - _ . [ ] $ @
+
+The last character of 'var' should be different from '-'.
+
+
+
+Armin Biere, Johannes Kepler University,
+Thu Nov 22 15:47:00 CET 2012

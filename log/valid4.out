@@ -1,0 +1,4 @@
+% INVALID formula (falsifying assignment follows)
+a = 0
+b = 1
+c = 0
