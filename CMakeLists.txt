@@ -120,7 +120,7 @@ if(USE_LINGELING)
     set_target_properties(lingeling PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
 	${CMAKE_CURRENT_BINARY_DIR}/lingeling/src/lingeling_project/)
     set_target_properties(lingeling PROPERTIES INTERFACE_COMPILE_DEFINITIONS
-	"-DLIMBOOLE_USE_LINGELING")
+	"LIMBOOLE_USE_LINGELING")
     
     target_link_libraries(limboole lingeling m)
     target_link_libraries(testlimboole lingeling m)

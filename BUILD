@@ -36,8 +36,13 @@ To build packages, run
 
     ./dockcross-windows-x64 make -C build-windows-x64 package
 
+A generic script is provided to automatically create packages for Linux and Windows,
+it can be executed like this:
+
+    ./create_packages.sh
+
 Max Heisinger
-Wed Oct 17 12:16:12 CEST 2018
+Wed Oct 17 14:00:00 CEST 2018
 
 Build using Autotools
 =====================

@@ -1,3 +1,12 @@
+Version 1.2
+
+  * added CMake build system for more fine-grained
+    compile-time options
+  * added support for cross compilation to Windows
+  * made generated assignments from Windows and
+    Linux be equal to make checking assignments as
+    easier for tutors
+
 Version 1.1
 
   * 'configure.sh' allows to select SAT solver

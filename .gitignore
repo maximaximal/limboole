@@ -71,3 +71,5 @@ flycheck_*.el
 
 build-*
 dockcross-*
+
+packages/
