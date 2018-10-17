@@ -19,6 +19,7 @@ should be the identity.
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <string.h>
 
 /*------------------------------------------------------------------------*/
 
