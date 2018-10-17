@@ -134,7 +134,15 @@ endif()
 # Install all targets
 # =============================================
 
-include(GNUInstallDirs)
+if(WIN32)
+    set(CMAKE_INSTALL_BINDIR "./")
+    set(CMAKE_INSTALL_LIBDIR "./")
+    set(CMAKE_INSTALL_INFODIR "./")
+    set(INFO_SUBDIR "")
+else()
+    include(GNUInstallDirs)
+    set(INFO_SUBDIR "limboole/")
+endif()
 
 install(TARGETS limboole
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -150,6 +158,11 @@ install(TARGETS dimacs2boole
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/static)
+
+install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/README
+    ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+    DESTINATION ${CMAKE_INSTALL_INFODIR}/${INFO_SUBDIR})
 
 # =============================================
 # Setup CPack
