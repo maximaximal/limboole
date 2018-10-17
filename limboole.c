@@ -359,7 +359,7 @@ init (void)
 static void
 connect_solver (Mgr * mgr)
 {
-  assert (mgr->use_lingeling + mgr->use_picosat = 1);
+  assert (mgr->use_lingeling + mgr->use_picosat == 1);
 #ifdef LIMBOOLE_USE_PICOSAT
   if (mgr->use_picosat)
     {
@@ -382,7 +382,7 @@ connect_solver (Mgr * mgr)
       lglsetout (mgr->lgl, mgr->log);
     }
 #endif
-  assert (!mgr->lgl + !mgr->picosat = 1);
+  assert (!mgr->lgl + !mgr->picosat == 1);
 }
 
 /*------------------------------------------------------------------------*/
@@ -1339,7 +1339,7 @@ limboole (int argc, char **argv)
 	}
     }
 
-  assert (mgr->use_lingeling + mgr->use_picosat = 1);
+  assert (mgr->use_lingeling + mgr->use_picosat == 1);
 
   if (!error && !done)
     {
