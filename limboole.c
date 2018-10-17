@@ -40,6 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 /*------------------------------------------------------------------------*/
 #ifdef LIMBOOLE_USE_LINGELING

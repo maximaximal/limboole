@@ -11,6 +11,12 @@ set(VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
 option(USE_PICOSAT "download and use the picosat solver as SAT solving backend" ON)
 option(USE_LINGELING "download and use the lingeling solver as SAT solving backend" ON)
 
+option(PACKAGE_DEB "package software as .deb if built on linux" ON)
+option(PACKAGE_TGZ "package software as .tar.gz if built on linux" ON)
+option(PACKAGE_RPM "package software as .rpm if built on linux" OFF)
+option(PACKAGE_INSTALLER "package software as .exe installer if built for windows" OFF)
+option(PACKAGE_ZIP "package software as .zip if built for windows" ON)
+
 set(PICOSAT_URL "http://fmv.jku.at/picosat/picosat-965.tar.gz"
     CACHE STRING "URL of the picosat tar.gz to use")
 set(PICOSAT_SHA512
@@ -28,25 +34,33 @@ set(LINGELING_SHA512
 
 include(ExternalProject)
 
-ExternalProject_Add(picosat_project
-    PREFIX picosat
-    URL ${PICOSAT_URL}
-    URL_HASH SHA512=${PICOSAT_SHA512}
+if(USE_PICOSAT)
+    ExternalProject_Add(picosat_project
+	PREFIX picosat
+	URL ${PICOSAT_URL}
+	URL_HASH SHA512=${PICOSAT_SHA512}
 
-    CONFIGURE_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project && ./configure.sh
-    BUILD_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project && make
-    INSTALL_COMMAND ""
-)
+	# The following patch enables picosat to
+	# be built using cross compilers on windows.
+	PATCH_COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/picosat_sigalrm_patch.c | cat - ${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project/app.c > /tmp/cat_tmp && mv /tmp/cat_tmp ${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project/app.c
 
-ExternalProject_Add(lingeling_project
-    PREFIX lingeling
-    URL ${LINGELING_URL}
-    URL_HASH SHA512=${LINGELING_SHA512}
+	CONFIGURE_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project && ./configure.sh
+	BUILD_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project && make all
+	INSTALL_COMMAND ""
+	)
+endif()
 
-    CONFIGURE_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/lingeling/src/lingeling_project && ./configure.sh
-    BUILD_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/lingeling/src/lingeling_project && make
-    INSTALL_COMMAND ""
-)
+if(USE_LINGELING)
+    ExternalProject_Add(lingeling_project
+	PREFIX lingeling
+	URL ${LINGELING_URL}
+	URL_HASH SHA512=${LINGELING_SHA512}
+
+	CONFIGURE_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/lingeling/src/lingeling_project && ./configure.sh
+	BUILD_COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/lingeling/src/lingeling_project && make
+	INSTALL_COMMAND ""
+	)
+endif()
 
 # =============================================
 # Setup limboole sources, executables and tests.
@@ -76,7 +90,7 @@ add_executable(dimacs2boole ${DIMACS2BOOLE_SRCS})
 # Setup VERSION
 # =============================================
 
-add_compile_definitions(VERSION="${VERSION}")
+add_definitions(-DVERSION="${VERSION}")
 
 # =============================================
 # Setup SAT backend linkage.
@@ -86,10 +100,11 @@ if(USE_PICOSAT)
     add_library(picosat STATIC IMPORTED)
     set_target_properties(picosat PROPERTIES IMPORTED_LOCATION
 	${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project/libpicosat.a)
-    target_compile_definitions(picosat INTERFACE "-DLIMBOOLE_USE_PICOSAT")
-    target_include_directories(picosat INTERFACE
+    set_target_properties(picosat PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
 	${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat_project/)
-    
+    set_target_properties(picosat PROPERTIES INTERFACE_COMPILE_DEFINITIONS
+	"LIMBOOLE_USE_PICOSAT")
+
     target_link_libraries(limboole picosat)
     target_link_libraries(testlimboole picosat)
     
@@ -102,9 +117,10 @@ if(USE_LINGELING)
     add_library(lingeling STATIC IMPORTED)
     set_target_properties(lingeling PROPERTIES IMPORTED_LOCATION
 	${CMAKE_CURRENT_BINARY_DIR}/lingeling/src/lingeling_project/liblgl.a)
-    target_compile_definitions(lingeling INTERFACE "-DLIMBOOLE_USE_LINGELING")
-    target_include_directories(lingeling INTERFACE
+    set_target_properties(lingeling PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
 	${CMAKE_CURRENT_BINARY_DIR}/lingeling/src/lingeling_project/)
+    set_target_properties(lingeling PROPERTIES INTERFACE_COMPILE_DEFINITIONS
+	"-DLIMBOOLE_USE_LINGELING")
     
     target_link_libraries(limboole lingeling m)
     target_link_libraries(testlimboole lingeling m)
@@ -113,3 +129,64 @@ if(USE_LINGELING)
     add_dependencies(testlimboole lingeling_project)
     add_dependencies(dimacs2boole lingeling_project)
 endif()
+
+# =============================================
+# Install all targets
+# =============================================
+
+include(GNUInstallDirs)
+
+install(TARGETS limboole
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/static)
+
+install(TARGETS testlimboole
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/static)
+
+install(TARGETS dimacs2boole
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/static)
+
+# =============================================
+# Setup CPack
+# =============================================
+
+set(CPACK_GENERATOR "")
+
+if(WIN32)
+    if(PACKAGE_ZIP)
+	set(CPACK_GENERATOR ${CPACK_GENERATOR} ZIP)
+    endif()
+    if(PACKAGE_INSTALLER)
+	set(CPACK_GENERATOR ${CPACK_GENERATOR} NSIS)
+    endif()
+else()
+    if(PACKAGE_DEB)
+	set(CPACK_GENERATOR ${CPACK_GENERATOR} DEB)
+    endif()
+    if(PACKAGE_TGZ)
+	set(CPACK_GENERATOR ${CPACK_GENERATOR} TGZ)
+    endif()
+    if(PACKAGE_RPM)
+	set(CPACK_GENERATOR ${CPACK_GENERATOR} RPM)
+    endif()
+endif()
+
+set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/README)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "a simple tool for checking satisfiability respectively tautology on arbitrary structural formulas")
+set(CPACK_PACKAGE_NAME "limboole")
+set(CPACK_PACKAGE_VENDOR "FMV, JKU")
+set(CPACK_PACKAGE_VERSION ${VERSION})
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_RESSOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+set(CPACK_RESSOURCE_FILE_README ${CMAKE_CURRENT_SOURCE_DIR}/README)
+set(CPACK_OUTPUT_FILE_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/packages)
+set(CPACK_PACKAGE_CONTACT "Max Heisinger <maximilian.heisinger@jku.at>")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "")
+
+include(CPack)
