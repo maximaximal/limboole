@@ -74,9 +74,5 @@ dockcross-*
 
 packages/
 /.tern-port
-/dimacs2boole.js
-/dimacs2boole.wasm
-/limboole.js
-/limboole.wasm
 /testlimboole.js
 /testlimboole.wasm
