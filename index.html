@@ -14,16 +14,17 @@
                 <p>Uses <a href="http://fmv.jku.at/limboole/">Limboole</a> and
                     <a href="http://fmv.jku.at/lingeling/">Lingeling</a> to parse an easy SAT DSL (instead of relying on DIMACS).
                     Compiled using <a href="https://emscripten.org/">Emscripten</a>,
-                    <a href="https://github.com/maximaximal/limboole">Source Code and Modifications are available on GitHub</a>.</p>
+                    <a href="https://github.com/maximaximal/limboole">Source Code and Modifications are available on GitHub</a>.
+                    Syntax is improved for mobile devices: The / symbol also counts as OR (same as |).</p>
                 <p>Created by <a href="https://maxheisinger.at">Max Heisinger</a>.</p>
 
                 <form>
                     <div class="row">
                         <div class="col">
-                            <select id="select_wrapper" class="form-control"></select>
+                            <select tabindex="1" id="select_wrapper" class="form-control"></select>
                         </div>
                         <div class="col">
-                            <button type="button" class="btn btn-primary btn-block" onclick="run_();">Run (or press Shift+Enter in input area)</button>
+                            <button tabindex="0" type="button" class="btn btn-primary btn-block" onclick="run_();">Run (or Shift+Enter in input area)</button>
                         </div>
                     </div>
                 </form>
@@ -31,16 +32,16 @@
                 <div class="row">
                     <div class="col-md-6">
                         <h2>Input</h2>
-                        <textarea class="form-control js-auto-size" id="input"></textarea>
+                        <textarea tabindex="2" class="form-control js-auto-size" id="input"></textarea>
                     </div>
                     <div class="col-md-6">
                         <div id="stdout_area">
                             <h2>Output</h2>
-                            <textarea class="form-control js-auto-size" id="stdout"></textarea>
+                            <textarea tabindex="3" class="form-control js-auto-size" id="stdout"></textarea>
                         </div>
                         <div id="stderr_area">
                             <h2>Errors</h2>
-                            <textarea class="form-control js-auto-size" id="stderr"></textarea>
+                            <textarea tabindex="4" class="form-control js-auto-size" id="stderr"></textarea>
                         </div>
                     </div>
                 </div>
@@ -51,6 +52,10 @@
         <script src="limboole.js"></script>
         <script src="dimacs2boole.js"></script>
         <script src="main.js"></script>
+
+        <script>
+         $("#input").focus();
+        </script>
     </body>
 </html>
 

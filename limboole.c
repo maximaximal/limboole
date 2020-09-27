@@ -638,7 +638,7 @@ RESTART_NEXT_TOKEN:
     {
       mgr->token = AND;
     }
-  else if (ch == '|')
+  else if (ch == '|' || ch == '/')
     {
       mgr->token = OR;
     }
