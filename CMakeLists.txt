@@ -21,6 +21,8 @@ add_executable(limboole ${LIMBOOLE_EXECUTABLE_SRCS})
 
 add_executable(dimacs2boole ${DIMACS2BOOLE_SRCS})
 
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Os)
+
 set_target_properties(limboole PROPERTIES COMPILE_DEFINITIONS "LIMBOOLE_USE_LINGELING")
 set_target_properties(dimacs2boole PROPERTIES COMPILE_DEFINITIONS "LIMBOOLE_USE_LINGELING")
 
