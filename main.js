@@ -122,6 +122,9 @@ function run_wrapper(wrapper) {
 
     function writeln(element, line) {
         element.value += line;
+
+        element.style.height = 'auto';
+        element.style.height = (element.scrollHeight) + 'px';
     };
 
     window.stdout_textarea.value = "";
@@ -168,3 +171,10 @@ document.getElementById("input").onkeydown = function(e) {
     }
     return true;
 };
+
+$('textarea').each(function () {
+    this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
+}).on('input change', function () {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
