@@ -5,35 +5,46 @@
 
         <link href="css/bootstrap.css" rel="stylesheet">
     </head>
-    <body>
-        <div class="container">
-            <h1>Limboole on the Go!</h1>
+    <body class="d-flex flex-column h-100">
+        <main role="main" class="flex-shrink-0">
+            <div class="container">
+                <h1>Limboole on the Go!</h1>
 
-            <form>
+                <form>
+                    <div class="row">
+                        <div class="col">
+                            <select id="select_wrapper" class="form-control"></select>
+                        </div>
+                        <div class="col">
+                            <button type="button" class="btn btn-primary btn-block" onclick="run_();">Run</button>
+                        </div>
+                    </div>
+                </form>
+
                 <div class="row">
                     <div class="col">
-                        <select id="select_wrapper" class="form-control"></select>
+                        <h2>Input</h2>
+                        <textarea rows="15" class="form-control" id="input"></textarea>
                     </div>
                     <div class="col">
-                        <button type="button" class="btn btn-primary btn-block" onclick="run_();">Run</button>
+                        <h2>Output</h2>
+                        <textarea rows="10" class="form-control" id="stdout"></textarea>
+                        <h2>Errors</h2>
+                        <textarea rows="5" class="form-control" id="stderr"></textarea>
                     </div>
                 </div>
-            </form>
-
-            <div class="row">
-                <div class="col">
-                    <h2>Input</h2>
-                    <textarea rows="15" class="form-control" id="input"></textarea>
-                </div>
-                <div class="col">
-                    <h2>Output</h2>
-                    <textarea rows="10" class="form-control" id="stdout"></textarea>
-                    <h2>Errors</h2>
-                    <textarea rows="5" class="form-control" id="stderr"></textarea>
-                </div>
             </div>
+        </main>
 
-        </div>
+        <footer class="footer mt-auto py-3">
+            <div class="container">
+                <p><span class="text-muted">Uses <a href="http://fmv.jku.at/limboole/">Limboole</a> and
+                    <a href="http://fmv.jku.at/lingeling/">Lingeling</a> to parse easy SAT DSL.
+                    Compiled using <a href="https://emscripten.org/">Emscripten</a>,
+                    <a href="https://github.com/maximaximal/limboole">Source Code and Modifications are available on GitHub</a>.</span></p>
+                <p><span class="text-muted">Created by <a href="https://maxheisinger.at">Max Heisinger</a>.</span></p>
+            </div>
+        </footer>
 
         <script src="limboole.js"></script>
         <script src="dimacs2boole.js"></script>
