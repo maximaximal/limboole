@@ -89,7 +89,6 @@ class StdinToStdoutProcessor {
         window.stderr__ = this.stderr.bind(this);
         
         let status = this.limboole(1, [""], satcheck, input, input.length);
-        console.log(status);
         
         if(this.stdout_buf != "") {
             this.print_line_stdout(this.stdout_buf);
