@@ -138,6 +138,10 @@ struct Mgr
   int dump;
   PicoSAT * picosat;
   LGL * lgl;
+
+  char *input;
+  unsigned int input_length;
+  unsigned int input_pos;
 };
 
 /*------------------------------------------------------------------------*/
@@ -352,6 +356,8 @@ init (void)
   res->log = stderr;
   res->out = stdout;
 
+  res->input_pos = 0;
+
   return res;
 }
 
@@ -536,8 +542,11 @@ next_char (Mgr * mgr)
       mgr->saved_char_is_valid = 0;
       res = mgr->saved_char;
     }
-  else
-    res = fgetc (mgr->in);
+  else {
+    if(mgr->input_pos == mgr->input_length) return EOF;
+
+    res = mgr->input[mgr->input_pos++];
+  }
 
   if (res == '\n')
     {
@@ -1199,7 +1208,7 @@ PICOSAT_USAGE \
 /*------------------------------------------------------------------------*/
 
 int
-limboole (int argc, char **argv)
+limboole (int argc, char **argv, int satcheck, char *input, unsigned int input_length)
 {
   const int *assignment;
   int pretty_print;
@@ -1215,6 +1224,11 @@ limboole (int argc, char **argv)
   pretty_print = 0;
 
   mgr = init ();
+
+  mgr->input = input;
+  mgr->input_length = input_length;
+
+  mgr->check_satisfiability = satcheck;
 
 #ifdef LIMBOOLE_USE_LINGELING
   mgr->use_lingeling = 1;

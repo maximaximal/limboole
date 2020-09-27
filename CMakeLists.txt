@@ -13,23 +13,15 @@ set(LIMBOOLE_EXECUTABLE_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/limboole.c
     )
 
-set(TESTLIMBOOLE_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/test.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/limboole.c
-    )
-
 set(DIMACS2BOOLE_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/dimacs2boole.c
     )
 
 add_executable(limboole ${LIMBOOLE_EXECUTABLE_SRCS})
 
-add_executable(testlimboole ${TESTLIMBOOLE_SRCS})
-
 add_executable(dimacs2boole ${DIMACS2BOOLE_SRCS})
 
 set_target_properties(limboole PROPERTIES COMPILE_DEFINITIONS "LIMBOOLE_USE_LINGELING")
-set_target_properties(testlimboole PROPERTIES COMPILE_DEFINITIONS "LIMBOOLE_USE_LINGELING")
 set_target_properties(dimacs2boole PROPERTIES COMPILE_DEFINITIONS "LIMBOOLE_USE_LINGELING")
 
 # =============================================
@@ -45,11 +37,9 @@ add_definitions(-DVERSION="${VERSION}")
 add_subdirectory(lingeling-bcj-78ebb86-180517)
 
 target_link_libraries(limboole lgl)
-target_link_libraries(testlimboole lgl)
 
-set_target_properties(limboole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s MODULARIZE=1 -s EXPORT_NAME='createLimbooleModule' -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain']")
-set_target_properties(testlimboole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s EXIT_RUNTIME=1 -s MODULARIZE=1 -s EXPORT_NAME='createTestLimbooleModule' -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain']")
-set_target_properties(dimacs2boole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s EXIT_RUNTIME=1 -s MODULARIZE=1 -s EXPORT_NAME='createDimacsToBooleModule' -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain']")
+set_target_properties(limboole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s MODULARIZE=1 -s EXIT_RUNTIME=0 -s EXPORT_NAME='createLimbooleModule' -s EXPORTED_FUNCTIONS=['_limboole','_main'] -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain','cwrap']")
+set_target_properties(dimacs2boole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s MODULARIZE=1 -s EXPORT_NAME='createDimacsToBooleModule' -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain']")
 
 # =============================================
 # Install all targets
@@ -58,11 +48,6 @@ set_target_properties(dimacs2boole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s EXI
 set(INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 install(TARGETS limboole
-    RUNTIME DESTINATION ${INSTALL_DIR}
-    LIBRARY DESTINATION ${INSTALL_DIR}
-    ARCHIVE DESTINATION ${INSTALL_DIR})
-
-install(TARGETS testlimboole
     RUNTIME DESTINATION ${INSTALL_DIR}
     LIBRARY DESTINATION ${INSTALL_DIR}
     ARCHIVE DESTINATION ${INSTALL_DIR})
