@@ -121,11 +121,11 @@ function run_wrapper(wrapper) {
     window.stderr_textarea = document.getElementById("stderr");
 
     function writeln(element, line) {
-        element.innerHTML += line;
+        element.value += line;
     };
 
-    window.stdout_textarea.innerHTML = "";
-    window.stderr_textarea.innerHTML = "";
+    window.stdout_textarea.value = "";
+    window.stderr_textarea.value = "";
 
     wrapper.run.bind(wrapper)(window.input_textarea.value, function(line) { writeln(window.stdout_textarea, line); }, function(line) { writeln(window.stderr_textarea, line); } );
 }
@@ -152,4 +152,19 @@ window.run_ = function() {
     let selector = document.getElementById("select_wrapper");
     let wr = window.Wrappers[selector.options.selectedIndex];
     run_wrapper(wr);
+};
+
+document.getElementById("input").onkeydown = function(e) {
+    if (e.keyCode == 13)
+    {
+        //      if (e.shiftKey === true)
+        if (e.shiftKey)  // thruthy
+        {
+            window.run_();
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    return true;
 };

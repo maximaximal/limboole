@@ -2,24 +2,41 @@
     <head>
         <title>Limboole on the Go!</title>
         <meta charset="utf-8"/>
+
+        <link href="css/bootstrap.css" rel="stylesheet">
     </head>
     <body>
-        <h1>Limboole on the Go!</h1>
+        <div class="container">
+            <h1>Limboole on the Go!</h1>
 
-        <select id="select_wrapper">
-        </select>
+            <form>
+                <div class="row">
+                    <div class="col">
+                        <select id="select_wrapper" class="form-control"></select>
+                    </div>
+                    <div class="col">
+                        <button type="button" class="btn btn-primary btn-block" onclick="run_();">Run</button>
+                    </div>
+                </div>
+            </form>
 
-        <button onclick="run_();">Run</button>
+            <div class="row">
+                <div class="col">
+                    <h2>Input</h2>
+                    <textarea rows="15" class="form-control" id="input"></textarea>
+                </div>
+                <div class="col">
+                    <h2>Output</h2>
+                    <textarea rows="10" class="form-control" id="stdout"></textarea>
+                    <h2>Errors</h2>
+                    <textarea rows="5" class="form-control" id="stderr"></textarea>
+                </div>
+            </div>
 
-        <textarea id="input"></textarea>
-        <br>
-        <textarea id="stdout"></textarea>
-        <br>
-        <textarea id="stderr"></textarea>
+        </div>
 
         <script src="limboole.js"></script>
         <script src="dimacs2boole.js"></script>
-
         <script src="main.js"></script>
     </body>
 </html>
