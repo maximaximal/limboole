@@ -188,7 +188,6 @@ function applyFromLocationHash() {
         input.style.height = (input.scrollHeight) + 'px';
 
         window.LimbooleLoadedPromise.then(function() {
-            input.onchange();
             window.run_();
         });
     }
