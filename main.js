@@ -185,9 +185,10 @@ function applyFromLocationHash() {
         input.value = h.substring(2);
 
         $(input).style.height = 'auto';
-        $(input).style.height = (this.scrollHeight) + 'px';
+        $(input).style.height = ($(input).scrollHeight) + 'px';
 
         window.LimbooleLoadedPromise.then(function() {
+            input.onchange();
             window.run_();
         });
     }
