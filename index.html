@@ -18,13 +18,16 @@
                     Syntax is improved for mobile devices: The / symbol also counts as OR (same as |).</p>
                 <p>Created by <a href="https://maxheisinger.at">Max Heisinger</a>.</p>
 
-                <form>
+                <form style="height: 3em;">
                     <div class="row">
                         <div class="col">
                             <select tabindex="1" id="select_wrapper" class="form-control"></select>
                         </div>
                         <div class="col">
-                            <button tabindex="0" type="button" class="btn btn-primary btn-block" onclick="run_();">Run (or Shift+Enter in input area)</button>
+                            <div class="progress" id="loading-indicator" style="height: 3em;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">Loading and Processing WebAssembly of Limboole...</div>
+                            </div>
+                            <button tabindex="0" type="button" class="btn btn-primary btn-block invisible" onclick="run_();" id="run-btn">Run (or Shift+Enter in input area)</button>
                         </div>
                     </div>
                 </form>
@@ -50,7 +53,6 @@
 
         <script src="js/jquery-3.5.1.slim.min.js"></script>
         <script src="limboole.js"></script>
-        <script src="dimacs2boole.js"></script>
         <script src="main.js"></script>
 
         <script>

@@ -38,9 +38,10 @@ class StdinToStdoutProcessor {
         }
     }
     
-    constructor(creatorFunc) {
+    constructor(creatorFunc, resolve, reject) {
         this.input_str_pos = 0;
         this.input_str = "";
+        this.ready = false;
 
         this.stdout_buf = "";
         this.stderr_buf = "";
@@ -76,6 +77,8 @@ class StdinToStdoutProcessor {
             Module.callMain();
             console.debug("Initialized Processor");
             self.limboole = Module.cwrap('limboole', 'number', ['number', 'array', 'number', 'string', 'number']);
+            resolve();
+            self.ready = true;
         });
     };
 
@@ -109,7 +112,15 @@ class ProcessorWrapper {
     }
 
     run(input, stdout, stderr) {
+        if(!this.ready()) {
+            alert("Not yet ready for execution! Wait until Limboole has been downloaded and compiled!");
+            return;
+        }
         this.processor.run(input, this.args, stdout, stderr);
+    }
+
+    ready() {
+        return this.processor.ready;
     }
 };
 
@@ -132,9 +143,16 @@ function run_wrapper(wrapper) {
     wrapper.run.bind(wrapper)(window.input_textarea.value, function(line) { writeln(window.stdout_textarea, line); }, function(line) { writeln(window.stderr_textarea, line); } );
 }
 
-window.Processors = [
-    new StdinToStdoutProcessor(createLimbooleModule),
-];
+window.LimbooleLoadedPromise = new Promise(function(resolve, reject) {
+    window.Processors = [
+        new StdinToStdoutProcessor(createLimbooleModule, resolve, reject),
+    ];
+});
+
+window.LimbooleLoadedPromise.then(function() {
+    $("#loading-indicator").hide();
+    $("#run-btn").removeClass("invisible");
+});
 
 window.Wrappers = [
     new ProcessorWrapper(window.Processors[0], "Validity Check", 0 ),
@@ -150,10 +168,33 @@ for(let i = 0; i < window.Wrappers.length; ++i) {
     selector.appendChild(o);
 }
 
+function stateToLocationHash() {
+    let selector = document.getElementById("select_wrapper");
+    let input = document.getElementById("input");
+    return encodeURIComponent(selector.options.selectedIndex + input.value);
+}
+
+function applyFromLocationHash() {
+    if(window.location.hash != "" && window.location.hash != undefined && window.location.hash != null) {
+        let selector = document.getElementById("select_wrapper");
+        let input = document.getElementById("input");
+
+        let h = decodeURIComponent(window.location.hash);
+
+        selector.value = h.charAt(1);
+        input.value = h.substring(2);
+
+        window.LimbooleLoadedPromise.then(function() {
+            window.run_();
+        });
+    }
+}
+
 window.run_ = function() {
     let selector = document.getElementById("select_wrapper");
     let wr = window.Wrappers[selector.options.selectedIndex];
     run_wrapper(wr);
+    window.location.hash = stateToLocationHash();
 };
 
 document.getElementById("input").onkeydown = function(e) {
@@ -177,3 +218,5 @@ $('textarea').each(function () {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
 });
+
+applyFromLocationHash();
