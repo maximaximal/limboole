@@ -1,0 +1,12 @@
+% INVALID formula (falsifying assignment follows)
+next_state0 = 0
+enable = 0
+state0 = 0
+next_state1 = 0
+state1 = 0
+delta0 = 1
+delta1 = 1
+next_delta0 = 1
+next_delta1 = 1
+next_delta0_lt_delta0 = 0
+next_delta1_lt_delta1 = 0

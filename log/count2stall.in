@@ -1,0 +1,29 @@
+% This is a counter and we check that the delta to the '11' state is
+% decreasing as long we have not reached the '11' state. Since the
+% counter may stall as long enable=0, a similar proof as for 'count2live'
+% for the liveness property 'AF (state1 = 1 & state0 = 1)' fails.
+%
+(next_state0 <-> !enable <-> state0)
+&
+(next_state1 <-> !(enable & state0) <-> state1)
+&
+(delta0 <-> !state0)
+&
+(delta1 <-> !state1)
+&
+(next_delta0 <-> !next_state0)
+&
+(next_delta1 <-> !next_state1)
+&
+(next_delta0_lt_delta0 <-> !next_delta0 & delta0)
+&
+(next_delta1_lt_delta1 <-> 
+  !next_delta1 & delta1 |
+  (!next_delta1 | delta1) & next_delta0_lt_delta0)
+&
+!state0
+&
+!state1
+->
+(!state1 | !state0 -> next_delta1_lt_delta1)
+

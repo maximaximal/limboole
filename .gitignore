@@ -1,5 +1,5 @@
-log/
 build/
+build*/
 
 # =====================================================
 # Gitignore for various temporary files.
@@ -78,3 +78,5 @@ packages/
 /testlimboole.wasm
 /.clangd
 /compile_commands.json
+
+log/*.log

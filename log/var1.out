@@ -1,0 +1,1 @@
+log/var1.in:1:2: scan error: variable 'invalid-variable-ending-with-' ends with '-'
