@@ -1,0 +1,93 @@
+
+----
+NEWS
+----
+
+August 2 2017:
+
+release of version 6.03:
+  - minor maintenance release
+  - removed obsolete hard assertion
+  - fixed command line help
+
+March 27 2017:
+
+release of version 6.02:
+  - replaces Bloqqer by the QBF solver Nenofex. The replacement was necessary
+    since Bloqqer is not reentrant, which may cause problems when creating
+    multiple instances of DepQBF
+  - updated DepQBF4J to link against most recent version of DepQBF
+  - fixed bug in QDIMACS output generation
+
+February 28 2017:
+
+release of version 6.01:
+  - fixes a memory error in legacy version 35 of Bloqqer
+  - optional linking of Bloqqer
+
+February 16 2017:
+
+release of version 6.0
+  - includes SAT solver PicoSAT and Bloqqer as external libraries
+
+September 09 2016:
+
+release of version 5.01
+  - bug fix in the generation of QDIMACS output
+  - many thanks to Johannes Marti for pointing out the problem and to Uwe Egly
+    for helpful discussions on implementing the fix.
+
+October 26 2015:
+
+release of version 5.0
+  - includes blocked clause elimination (QBCE)
+  - dynamic QBCE
+  - preprocessing QBCE
+  - inprocessing QBCE
+
+
+June 9 2015:
+
+release of version 4.01
+
+
+February 18 2015:
+
+release of version 4.0
+
+
+September 30 2014:
+
+release of version 3.04
+
+
+May 8 2014:
+
+release of version 3.03, 
+  including DepQBF4J version 0.1
+
+
+April 23 2014:
+
+release of version 3.02
+
+
+April 2014:
+
+release of version 3.01
+
+
+February 2014: 
+
+release of version 3.0
+
+
+August 2013: 
+
+release of version 2.0
+
+
+July 2012: 
+
+release of version 1.0
+

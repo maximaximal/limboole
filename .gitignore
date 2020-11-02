@@ -76,3 +76,5 @@ packages/
 /.tern-port
 /testlimboole.js
 /testlimboole.wasm
+/.clangd
+/compile_commands.json

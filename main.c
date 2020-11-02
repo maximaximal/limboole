@@ -1,7 +1,7 @@
-int limboole (int, char **, int satcheck, char* input, unsigned int input_length);
+int limboole (int, char **);
 
 int
 main (int argc, char **argv)
 {
-  return limboole (argc, argv, 0, "", 0);
+  return limboole (argc, argv);
 }

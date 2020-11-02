@@ -76,7 +76,7 @@ class StdinToStdoutProcessor {
             console.debug("Initial Processor Startup");
             Module.callMain();
             console.debug("Initialized Processor");
-            self.limboole = Module.cwrap('limboole', 'number', ['number', 'array', 'number', 'string', 'number']);
+            self.limboole = Module.cwrap('limboole_extended', 'number', ['number', 'array', 'number', 'string', 'number']);
             resolve();
             self.ready = true;
         });
@@ -156,7 +156,9 @@ window.LimbooleLoadedPromise.then(function() {
 
 window.Wrappers = [
     new ProcessorWrapper(window.Processors[0], "Validity Check", 0 ),
-    new ProcessorWrapper(window.Processors[0], "Satisfiability Check", 1)
+    new ProcessorWrapper(window.Processors[0], "Satisfiability Check", 1),
+    new ProcessorWrapper(window.Processors[0], "QBF Validity Check", 2),
+    new ProcessorWrapper(window.Processors[0], "QBF Satisfiability Check", 3)
 ];
 
 let selector = document.getElementById("select_wrapper");

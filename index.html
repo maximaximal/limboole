@@ -11,15 +11,67 @@
             <div class="container">
                 <h1>Limboole on the Go!</h1>
 
-                <p>Uses <a href="http://fmv.jku.at/limboole/">Limboole</a> and
-                    <a href="http://fmv.jku.at/lingeling/">Lingeling</a> to parse an easy SAT DSL (instead of relying on DIMACS).
+                <p>Uses <a href="http://fmv.jku.at/limboole/">Limboole</a> (MIT licensed), 
+                    <a href="http://fmv.jku.at/picosat/">PicoSAT</a> (MIT licensed),
+                    and <a href="https://lonsing.github.io/depqbf/">DepQBF</a> (GPLv3 licensed) to parse
+                    an easy SAT and QBF DSL (instead of relying on DIMACS).
                     Compiled using <a href="https://emscripten.org/">Emscripten</a>,
                     <a href="https://github.com/maximaximal/limboole">Source Code and Modifications are available on GitHub</a>.
-                    Syntax is improved for mobile devices: The / symbol also counts as OR (same as |). Every time a formula is 
-                    executed, the link in your URL-bar (awesome-bar, location-bar or some other name) updates and can
-                    be copied. This link can be opened at other browsers and directly executes the given formula. <a href="#1Hello%2FWorld" target="_blank">Give it a try!</a></p>
-                <p>Created by <a href="https://maxheisinger.at">Max Heisinger</a>. I also wrote a short 
-                <a href="https://maxheisinger.at/en/2020/09/28/webassembly-and-limboole-in-the-browser/">blog entry</a> about this.</p>
+                    Created by <a href="https://maxheisinger.at">Max Heisinger</a>. I also wrote a short 
+                    <a href="https://maxheisinger.at/en/2020/09/28/webassembly-and-limboole-in-the-browser/">blog entry</a> about this.
+                </p>
+                <button class="btn btn-secondary btn-block" type="button" data-toggle="collapse"
+                        data-target="#howto-collapse" aria-expanded="false" aria-controls="howto-collapse">
+                    Open How-To
+                </button>
+
+
+                <p></p>
+
+                <div class="collapse" id="howto-collapse">
+                    <h2>How-To</h2>
+                    <h3>Usage</h3>
+                    <p>
+                        Write formulas into the left text input, press the button and get results on the right side.
+                        The formula can also be analyzed using <kbd><kbd>Shift</kbd> + <kbd>Enter</kbd></kbd>.
+                        Every time a formula is 
+                        analyzed, the link in your URL-bar (awesome-bar, location-bar or some other name) updates and can
+                        be copied. This link can be opened at other browsers and directly
+                        executes the given formula. <a href="#1Hello%2FWorld" target="_blank">Give it a try!</a>
+                    </p>
+                    <h3>Modes</h3>
+                    <table class="table table-striped">
+                        <tbody>
+                            <tr>
+                                <td>Validity Check</td>
+                                <td>Check if the formula is valid, i.e. all possible combinations of variables satisfy the formula.</td>
+                            </tr>
+                            <tr>
+                                <td>Satisfiability Check</td>
+                                <td>Check if there is any assignment of variables so that the formula is satisfied.</td>
+                            </tr>
+                            <tr>
+                                <td>QBF Validity Check</td>
+                                <td>Same as Validity Check, but with expanded input language adding ∀ (written as #) and ∃ (written as ?). Uses DepQBF.</td>
+                            </tr>
+                            <tr>
+                                <td>QBF Satisfiability Check</td>
+                                <td>Same as Satisfiability Check, but with expanded input language adding ∀ (written as #) and ∃ (written as ?). Uses DepQBF.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h3>Syntax</h3>
+                    <p>The input format has the following syntax in EBNF ( [ ... ] means optional,  { ... } means repeated arbitrary many times).</p>
+                    <pre>expr ::= iff
+iff ::= implies { '<->' implies }
+implies ::= or [ '->' or | '<-' or ]
+or ::= and { ('|' | '/') and }
+and ::= not { '&' not }
+not ::= basic | '!' not
+basic ::= var | '(' expr ')'</pre><p><code>var</code> is a string over letters, digits and the following characters: <code>- _ . [ ] $ @</code>.
+                        The last character of <code>var</code> should be different from <code>-</code>.
+                        Compared to classical Limboole, the syntax is improved for mobile devices: The <code>/</code> symbol also counts as OR (same as <code>|</code>). </p>
+                </div>
 
                 <form style="height: 3em;">
                     <div class="row">
@@ -55,6 +107,7 @@
         </main>
 
         <script src="js/jquery-3.5.1.slim.min.js"></script>
+        <script src="js/bootstrap.bundle.min.js"></script>
         <script src="limboole.js"></script>
         <script src="main.js"></script>
 

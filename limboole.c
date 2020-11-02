@@ -1,5 +1,8 @@
 /*------------------------------------------------------------------------*/
 /* (C)2002-2003, Armin Biere, ETH Zurich, 2005, 2012, Armin Biere, JKU Linz.
+ * QBF extension by Martina Seidl JKU Linz (2020)
+ * Support for multiple Solvers and WebAssembly (Emscripten)
+     by Max Heisinger JKU Linz (2020)
 
 All rights reserved. Redistribution and use in source and binary forms, with
 or without modification, are permitted provided that the following
@@ -40,7 +43,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
-#include <stdint.h>
 
 /*------------------------------------------------------------------------*/
 #ifdef LIMBOOLE_USE_LINGELING
@@ -49,9 +51,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef struct LGL LGL;
 #endif
 #ifdef LIMBOOLE_USE_PICOSAT
-#include "picosat.h"
+#include <picosat.h>
 #else
 typedef struct PicoSAT PicoSAT;
+#endif
+#ifdef LIMBOOLE_USE_DEPQBF
+#include <qdpll.h>
+#else
+typedef struct QDPLL QDPLL;
 #endif
 /*------------------------------------------------------------------------*/
 /* These are the node types we support.  They are ordered in decreasing
@@ -72,6 +79,8 @@ enum Type
   IFF = 8,
   DONE = 9,
   ERROR = 10,
+  ALL = 11,
+  EX = 12
 };
 
 /*------------------------------------------------------------------------*/
@@ -79,6 +88,7 @@ enum Type
 typedef enum Type Type;
 typedef struct Node Node;
 typedef union Data Data;
+typedef struct PNode PNode;
 
 /*------------------------------------------------------------------------*/
 
@@ -99,6 +109,13 @@ struct Node
   Data data;
 };
 
+struct PNode 
+{
+  Type type; 
+  Node *node; 
+  PNode *next; 
+};
+
 /*------------------------------------------------------------------------*/
 
 typedef struct Mgr Mgr;
@@ -108,6 +125,7 @@ struct Mgr
   unsigned nodes_size;
   unsigned nodes_count;
   int idx;
+  PNode *first_prefix;
   Node **nodes;
   Node *first;
   Node *last;
@@ -122,6 +140,7 @@ struct Mgr
   int verbose;
   int use_picosat;
   int use_lingeling;
+  int use_depqbf;
   unsigned x;
   unsigned y;
   FILE *in;
@@ -136,8 +155,12 @@ struct Mgr
   Node **idx2node;
   int check_satisfiability;
   int dump;
+  int qdump;
   PicoSAT * picosat;
   LGL * lgl;
+  QDPLL *qdpll;
+  int inner, outer;
+  int free_vars;
 
   char *input;
   unsigned int input_length;
@@ -366,7 +389,7 @@ init (void)
 static void
 connect_solver (Mgr * mgr)
 {
-  assert (mgr->use_lingeling + mgr->use_picosat == 1);
+  assert (mgr->use_lingeling || mgr->use_picosat || mgr->use_depqbf);
 #ifdef LIMBOOLE_USE_PICOSAT
   if (mgr->use_picosat)
     {
@@ -384,12 +407,20 @@ connect_solver (Mgr * mgr)
       assert (!mgr->lgl);
       mgr->lgl = lglinit ();
       if (mgr->verbose)
-	lglsetopt (mgr->lgl, "verbose", 1);
-      lglsetprefix (mgr->lgl, "c Lingeling ");
-      lglsetout (mgr->lgl, mgr->log);
+        lglsetopt(mgr->lgl, "verbose", 1);
+      lglsetprefix(mgr->lgl, "c Lingeling ");
+      lglsetout(mgr->lgl, mgr->log);
+  }
+#endif
+#ifdef LIMBOOLE_USE_DEPQBF
+  if (mgr->use_depqbf)
+    {
+      assert (!mgr->qdpll);
+      mgr->qdpll = qdpll_create ();
+      qdpll_configure(mgr->qdpll, "--no-dynamic-nenofex");
     }
 #endif
-  assert (!mgr->lgl + !mgr->picosat == 1);
+  assert (mgr->lgl || mgr->picosat || mgr->qdpll);
 }
 
 /*------------------------------------------------------------------------*/
@@ -398,6 +429,7 @@ static void
 release (Mgr * mgr)
 {
   Node *p, *next;
+  PNode *pp, *pnext;
 
 #ifdef LIMBOOLE_USE_PICOSAT
   if (mgr->picosat)
@@ -407,6 +439,10 @@ release (Mgr * mgr)
   if (mgr->lgl)
     lglrelease (mgr->lgl);
 #endif
+#ifdef LIMBOOLE_USE_DEPQBF
+  if (mgr->qdpll)
+    qdpll_delete (mgr->qdpll);
+#endif
 
   for (p = mgr->first; p; p = next)
     {
@@ -415,6 +451,10 @@ release (Mgr * mgr)
 	free (p->data.as_name);
       free (p);
     }
+  for (pp = mgr->first_prefix; pp; pp = pnext) {
+    pnext = pp->next; 
+    free (pp); 
+  }
 
 
   if (mgr->close_in)
@@ -638,6 +678,14 @@ RESTART_NEXT_TOKEN:
     {
       mgr->token = AND;
     }
+  else if (ch == '?' && mgr->use_depqbf)
+    {
+      mgr->token = EX;
+    }
+  else if (ch == '#' && mgr->use_depqbf)
+    {
+      mgr->token = ALL;
+    }
   else if (ch == '|' || ch == '/')
     {
       mgr->token = OR;
@@ -816,6 +864,66 @@ parse_iff (Mgr * mgr)
 
 /*------------------------------------------------------------------------*/
 
+#ifdef LIMBOOLE_USE_DEPQBF
+static int parse_prefix(Mgr *mgr) {
+  Type token;
+  Node *v;
+  PNode *p, *n = NULL;
+
+  int scope = EX;
+
+  if (mgr->token == ERROR)
+    return 0;
+
+  int outer_scope_quantor =
+    mgr->check_satisfiability == 1 ? QDPLL_QTYPE_EXISTS : QDPLL_QTYPE_FORALL;
+
+  mgr->outer = mgr->inner = qdpll_new_scope(mgr->qdpll, outer_scope_quantor);
+  while ((mgr->token == ALL) || (mgr->token == EX)) {
+    token = mgr->token;
+    next_token(mgr);
+    if (mgr->token != VAR)
+      return 0;
+    v = var(mgr, mgr->buffer);
+    v->idx = ++mgr->idx;
+    p = (PNode *)malloc(sizeof(*p));
+    p->node = v;
+    p->type = mgr->token;
+    p->next = NULL;
+    if (n) {
+      n->next = p;
+    } else {
+      mgr->first_prefix = n = p;
+    }
+    n = p;
+
+    if (scope != token) {
+
+      if (scope)
+        qdpll_add(mgr->qdpll, 0);
+
+      mgr->inner = qdpll_new_scope(
+          mgr->qdpll, token == ALL ? QDPLL_QTYPE_FORALL : QDPLL_QTYPE_EXISTS);
+      scope = token;
+    }
+    qdpll_add(mgr->qdpll, v->idx);
+
+    next_token(mgr);
+  }
+  if (scope)
+    qdpll_add(mgr->qdpll, 0);
+
+  if (scope == ALL) {
+    mgr->inner = qdpll_new_scope(mgr->qdpll, QDPLL_QTYPE_EXISTS);
+    qdpll_add(mgr->qdpll, 0);
+  }
+
+  return 1;
+}
+#endif
+
+/*------------------------------------------------------------------------*/
+
 static Node *
 parse_expr (Mgr * mgr)
 {
@@ -827,8 +935,6 @@ parse_expr (Mgr * mgr)
 static int
 parse (Mgr * mgr)
 {
-  next_token (mgr);
-
   if (mgr->token == ERROR)
     return 0;
 
@@ -857,6 +963,10 @@ add_lit (Mgr * mgr, int lit)
   if (mgr->lgl)
     lgladd (mgr->lgl, lit);
 #endif
+#ifdef LIMBOOLE_USE_DEPQBF
+  if (mgr->qdpll)
+    qdpll_add(mgr->qdpll, lit);
+#endif
 }
 
 /*------------------------------------------------------------------------*/
@@ -869,7 +979,7 @@ add_clause (Mgr * mgr, int * clause)
     {
       add_lit (mgr, *p);
       if (mgr->dump)
-	fprintf (mgr->out, "%d ", *p);
+    fprintf (mgr->out, "%d ", *p);
     }
   add_lit (mgr, 0);
   if (mgr->dump)
@@ -929,32 +1039,45 @@ tseitin (Mgr * mgr)
 
   num_clauses = 0;
 
-  for (p = mgr->first; p; p = p->next_inserted)
-    {
+  for (p = mgr->first; p; p = p->next_inserted) {
+    if (!p->idx) {
       p->idx = ++mgr->idx;
 
+#ifdef LIMBOOLE_USE_DEPQBF
+      if(mgr->use_depqbf) {
+        if (p->type == VAR) {
+          qdpll_add_var_to_scope(mgr->qdpll, p->idx, mgr->outer);
+          mgr->free_vars = 1;
+        } else {
+          qdpll_add_var_to_scope(mgr->qdpll, p->idx, mgr->inner);
+        }
+      }
+#endif
       if (mgr->dump && p->type == VAR)
-	fprintf (mgr->out, "c %d %s\n", p->idx, p->data.as_name);
-
-      switch (p->type)
-	{
-	case IFF:
-	  num_clauses += 4;
-	  break;
-	case OR:
-	case AND:
-	case IMPLIES:
-	case SEILPMI:
-	  num_clauses += 3;
-	  break;
-	case NOT:
-	  num_clauses += 2;
-	  break;
-	default:
-	  assert (p->type == VAR);
-	  break;
-	}
+        fprintf(mgr->out, "c %d %s\n", p->idx, p->data.as_name);
     }
+
+    if (mgr->dump && p->type == VAR)
+      fprintf(mgr->out, "c %d %s\n", p->idx, p->data.as_name);
+
+    switch (p->type) {
+    case IFF:
+      num_clauses += 4;
+      break;
+    case OR:
+    case AND:
+    case IMPLIES:
+    case SEILPMI:
+      num_clauses += 3;
+      break;
+    case NOT:
+      num_clauses += 2;
+      break;
+    default:
+      assert (p->type == VAR);
+      break;
+    }
+  }
 
   mgr->idx2node = (Node **) calloc (mgr->idx + 1, sizeof (Node *));
   for (p = mgr->first; p; p = p->next_inserted)
@@ -1018,6 +1141,7 @@ tseitin (Mgr * mgr)
   assert (mgr->root);
 
   sign = (mgr->check_satisfiability) ? 1 : -1;
+  if(mgr->use_depqbf) sign = 1;
   unit_clause (mgr, sign * mgr->root->idx);
 }
 
@@ -1135,10 +1259,26 @@ pp_iff_implies (Mgr * mgr, Node * node, Type outer)
 
 /*------------------------------------------------------------------------*/
 
+static void pp_prefix(Mgr *mgr) {
+  PNode *n;
+
+  for (n = mgr->first_prefix; n; n = n->next) {
+    if (n->type == ALL)
+      fprintf(mgr->out, "#");
+    else
+      fprintf(mgr->out, "?");
+
+    printf("%s ", n->node->data.as_name);
+  }
+}
+
+/*------------------------------------------------------------------------*/
+
 static void
 pp (Mgr * mgr)
 {
   assert (mgr->root);
+  pp_prefix (mgr);
   pp_iff_implies (mgr, mgr->root, DONE);
   fputc ('\n', mgr->out);
 }
@@ -1155,40 +1295,94 @@ print_assignment (Mgr * mgr)
       val = 0;
 #ifdef LIMBOOLE_USE_PICOSAT
       if (mgr->picosat)
-	val = picosat_deref (mgr->picosat, idx);
+    val = picosat_deref (mgr->picosat, idx);
 #endif
 #ifdef LIMBOOLE_USE_LINGELING
       if (mgr->lgl)
-	val = lglderef (mgr->lgl, idx);
+    val = lglderef (mgr->lgl, idx);
+#endif
+#ifdef LIMBOOLE_USE_DEPQBF
+      if (mgr->qdpll &&
+          qdpll_get_nesting_of_var(mgr->qdpll, idx) == mgr->outer) {
+        val = qdpll_get_value(mgr->qdpll, idx);
+      }
 #endif
       n = mgr->idx2node[idx];
       if (n->type == VAR)
-	fprintf (mgr->out, "%s = %d\n", n->data.as_name, val > 0);
-    }
+        fprintf(mgr->out, "%s = %d\n", n->data.as_name, val > 0);
+  }
 }
 
 /*------------------------------------------------------------------------*/
-#if defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING)
+#if defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING) && defined(LIMBOOLE_USE_DEPQBF)
 #define PICOSAT_USAGE \
 "  --picosat      use PicoSAT as SAT solver back-end (disabled by default)\n"
 #define LINGELING_USAGE \
 "  --lingeling    use Lingeling as SAT solver back-end (default)\n"
+#define DEPQBF_USAGE \
+"  --depqbf    use DepQBF as QBF solver back-end (disabled by default)\n"
 #endif
-#if !defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING)
+
+#if defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING) && !defined(LIMBOOLE_USE_DEPQBF)
+#define PICOSAT_USAGE \
+"  --picosat      use PicoSAT as SAT solver back-end (disabled by default)\n"
+#define LINGELING_USAGE \
+"  --lingeling    use Lingeling as SAT solver back-end (default)\n"
+#define DEPQBF_USAGE \
+"  --depqbf    no support for DepQBF compiled in\n"
+#endif
+
+#if !defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING) && defined(LIMBOOLE_USE_DEPQBF)
 #define PICOSAT_USAGE \
 "  --picosat      no support for PicoSAT SAT solver compiled in\n"
 #define LINGELING_USAGE \
 "  --lingeling    using Lingeling (as the only available SAT solver back-end)\n"
+#define DEPQBF_USAGE \
+"  --depqbf    use DepQBF as QBF solver back-end \n"
 #endif
-#if defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING)
+
+#if !defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING) && !defined(LIMBOOLE_USE_DEPQBF)
+#define PICOSAT_USAGE \
+"  --picosat      no support for PicoSAT SAT solver compiled in\n"
+#define LINGELING_USAGE \
+"  --lingeling    using Lingeling (as the only available SAT solver back-end)\n"
+#define DEPQBF_USAGE \
+"  --depqbf    no support for DepQBF built in \n"
+#endif
+
+#if defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING) && defined(LIMBOOLE_USE_DEPQBF)
+#define PICOSAT_USAGE \
+"  --picosat      using PicoSAT \n"
+#define LINGELING_USAGE \
+"  --lingeling    no support for Lingeling SAT solver compiled in\n"
+#define DEPQBF_USAGE \
+"  --depqbf    use DepQBF as QBF solver back-end\n"
+#endif
+
+#if defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING) && !defined(LIMBOOLE_USE_DEPQBF)
 #define PICOSAT_USAGE \
 "  --picosat      using PicoSAT (as the only available SAT solver back-end)\n"
 #define LINGELING_USAGE \
 "  --lingeling    no support for Lingeling SAT solver compiled in\n"
+#define DEPQBF_USAGE \
+"  --depqbf    no support for DepQBF compiled in\n"
 #endif
-#if !defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING)
-#error "At least one of Lingeling or PicoSAT has to be available!"
+
+#if !defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING) && defined(LIMBOOLE_USE_DEPQBF)
+#define PICOSAT_USAGE \
+"  --picosat      no support for PicoSAT SAT solver compiled in\n"
+#define LINGELING_USAGE \
+"  --lingeling    no support for Lingeling SAT solver compiled in\n"
+#define DEPQBF_USAGE \
+"  --depqbf       using DepQBF as QBF solver back-end\n"
 #endif
+
+#if !defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING) \
+  && !defined(LIMBOOLE_USE_DEPQBF)
+#error "At least one of Lingeling or PicoSAT or DepQBF has to be available!"
+#endif
+
+
 
 #define USAGE \
 "usage: limboole [ <option> ... ]\n" \
@@ -1198,18 +1392,21 @@ print_assignment (Mgr * mgr)
 "  -v             increase verbosity\n" \
 "  -p             pretty print input formula only\n" \
 "  -d             dump generated CNF only\n" \
-"  -s             check satisfiability (default is to check validity)\n" \
+"  -s             check satisfiability with SAT Solvers \n "\
+"                       (default is to check validity; "\
+"                       option is not allowed for QBF solvers)\n" \
 "  -o <out-file>  set output file (default <stdout>)\n" \
 "  -l <log-file>  set log file (default <stderr>)\n" \
 LINGELING_USAGE \
 PICOSAT_USAGE \
+DEPQBF_USAGE \
 "  <in-file>      input file (default <stdin>)\n"
 
 /*------------------------------------------------------------------------*/
 
-int
-limboole (int argc, char **argv, int satcheck, char *input, unsigned int input_length)
-{
+
+int limboole_extended(int argc, char **argv, int op, char *input,
+             unsigned int input_length) {
   const int *assignment;
   int pretty_print;
   FILE *file;
@@ -1223,202 +1420,219 @@ limboole (int argc, char **argv, int satcheck, char *input, unsigned int input_l
   error = 0;
   pretty_print = 0;
 
-  mgr = init ();
+  mgr = init();
 
   mgr->input = input;
   mgr->input_length = input_length;
 
+  int satcheck = 0;
+  int use_depqbf = 0;
+  if(op == 1 || op == 3)
+    satcheck = 1;
+  if(op == 2 || op == 3) {
+    use_depqbf = 1;
+    mgr->use_depqbf = 1;
+  }
   mgr->check_satisfiability = satcheck;
 
+  // Allow simultaneous linking of DepQBF and SAT Solver and switch using
+  // parameters.
 #ifdef LIMBOOLE_USE_LINGELING
-  mgr->use_lingeling = 1;
-#else
-  mgr->use_picosat = 1;
+  mgr->use_lingeling = use_depqbf == 0;
+#endif
+#if LIMBOOLE_USE_PICOSAT
+  mgr->use_picosat = use_depqbf == 0;
+#endif
+#if LIMBOOLE_USE_DEPQBF
+  mgr->use_depqbf = use_depqbf == 1;
 #endif
 
-  for (i = 1; !done && !error && i < argc; i++)
-    {
-      if (!strcmp (argv[i], "-h"))
-	{
-	  fprintf (mgr->out, USAGE);
-	  done = 1;
-	}
-      else if (!strcmp (argv[i], "--version"))
-	{
-	  fprintf (mgr->out, "%s\n", VERSION);
-	  done = 1;
-	}
-      else if (!strcmp (argv[i], "-v"))
-	{
-	  mgr->verbose += 1;
-	}
-      else if (!strcmp (argv[i], "-p"))
-	{
-	  pretty_print = 1;
-	}
-      else if (!strcmp (argv[i], "-d"))
-	{
-	  mgr->dump = 1;
-	}
-      else if (!strcmp (argv[i], "-s"))
-	{
-	  mgr->check_satisfiability = 1;
-	}
-      else if (!strcmp (argv[i], "-o"))
-	{
-	  if (i == argc - 1)
-	    {
-	      fprintf (mgr->log, "*** argument to '-o' missing (try '-h')\n");
-	      error = 1;
-	    }
-	  else if (!(file = fopen (argv[++i], "w")))
-	    {
-	      fprintf (mgr->log, "*** could not write '%s'\n", argv[i]);
-	      error = 1;
-	    }
-	  else if (mgr->close_out)
-	    {
-	      /* We moved this down for coverage in testing purposes */
-	      fclose (file);
-	      fprintf (mgr->log, "*** '-o' specified twice (try '-h')\n");
-	      error = 1;
-	    }
-	  else
-	    {
-	      mgr->out = file;
-	      mgr->close_out = 1;
-	    }
-	}
-      else if (!strcmp (argv[i], "-l"))
-	{
-	  if (i == argc - 1)
-	    {
-	      fprintf (mgr->log, "*** argument to '-l' missing (try '-h')\n");
-	      error = 1;
-	    }
-	  else if (!(file = fopen (argv[++i], "a")))
-	    {
-	      fprintf (mgr->log, "*** could not append to '%s'\n", argv[i]);
-	      error = 1;
-	    }
-	  else if (mgr->close_log)
-	    {
-	      /* We moved this down for coverage in testing purposes */
-	      fclose (file);
-	      fprintf (mgr->log, "*** '-l' specified twice (try '-h')\n");
-	      error = 1;
-	    }
-	  else
-	    {
-	      mgr->log = file;
-	      mgr->close_log = 1;
-	    }
-	}
-#ifdef LIMBOOLE_USE_PICOSAT
-      else if (!strcmp (argv[i], "--picosat"))
-	{
-	  mgr->use_lingeling = 0;
-	  mgr->use_picosat = 1;
-	}
-#endif
-#ifdef LIMBOOLE_USE_LINGELING
-      else if (!strcmp (argv[i], "--lingeling"))
-	{
-	  mgr->use_lingeling = 1;
-	  mgr->use_picosat = 0;
-	}
-#endif
-      else if (argv[i][0] == '-')
-	{
-	  fprintf (mgr->log,
-		   "*** invalid command line option '%s' (try '-h')\n",
-		   argv[i]);
-	  error = 1;
-	}
-      else if (mgr->close_in)
-	{
-	  fprintf (mgr->log,
-		   "*** can not read more than two files (try '-h')\n");
-	  error = 1;
-	}
-      else if (!(file = fopen (argv[i], "r")))
-	{
-	  fprintf (mgr->log, "*** could not read '%s'\n", argv[i]);
-	  error = 1;
-	}
-      else
-	{
-	  mgr->in = file;
-	  mgr->name = argv[i];
-	  mgr->close_in = 1;
-	}
+  for (i = 1; !done && !error && i < argc; i++) {
+    if (!strcmp(argv[i], "-h")) {
+      fprintf(mgr->out, USAGE);
+      done = 1;
+    } else if (!strcmp(argv[i], "--version")) {
+      fprintf(mgr->out, "%s\n", VERSION);
+      done = 1;
+    } else if (!strcmp(argv[i], "-v")) {
+      mgr->verbose += 1;
+    } else if (!strcmp(argv[i], "-p")) {
+      pretty_print = 1;
+    } else if (!strcmp(argv[i], "-d")) {
+      if (mgr->use_depqbf) {
+        mgr->dump = 0;
+        mgr->qdump = 1;
+      } else {
+        mgr->dump = 1;
+        mgr->qdump = 0;
+      }
+    } else if (!strcmp(argv[i], "-s")) {
+      mgr->check_satisfiability = 1;
+      if (mgr->use_depqbf) {
+        fprintf(mgr->log, "-s option not allowed for QBF\n");
+        error = 1;
+      }
+
+    } else if (!strcmp(argv[i], "-o")) {
+      if (i == argc - 1) {
+        fprintf(mgr->log, "*** argument to '-o' missing (try '-h')\n");
+        error = 1;
+      } else if (!(file = fopen(argv[++i], "w"))) {
+        fprintf(mgr->log, "*** could not write '%s'\n", argv[i]);
+        error = 1;
+      } else if (mgr->close_out) {
+        /* We moved this down for coverage in testing purposes */
+        fclose(file);
+        fprintf(mgr->log, "*** '-o' specified twice (try '-h')\n");
+        error = 1;
+      } else {
+        mgr->out = file;
+        mgr->close_out = 1;
+      }
+    } else if (!strcmp(argv[i], "-l")) {
+      if (i == argc - 1) {
+        fprintf(mgr->log, "*** argument to '-l' missing (try '-h')\n");
+        error = 1;
+      } else if (!(file = fopen(argv[++i], "a"))) {
+        fprintf(mgr->log, "*** could not append to '%s'\n", argv[i]);
+        error = 1;
+      } else if (mgr->close_log) {
+        /* We moved this down for coverage in testing purposes */
+        fclose(file);
+        fprintf(mgr->log, "*** '-l' specified twice (try '-h')\n");
+        error = 1;
+      } else {
+        mgr->log = file;
+        mgr->close_log = 1;
+      }
     }
-
-  assert (mgr->use_lingeling + mgr->use_picosat == 1);
-
-  if (!error && !done)
-    {
-      error = !parse (mgr);
-
-      if (!error)
-	{
-	  if (pretty_print)
-	    pp (mgr);
-	  else
-	    {
-	      connect_solver (mgr);
-	      tseitin (mgr);
-	      if (!mgr->dump)
-		{
-#ifdef LIMBOOLE_USE_LINGELING
-		  res = 0;
-		  if (mgr->lgl)
-		    res = lglsat (mgr->lgl);
-#endif
 #ifdef LIMBOOLE_USE_PICOSAT
-		  if (mgr->picosat)
-		    res = picosat_sat (mgr->picosat, -1);
-#endif
-		  if (res == 10)
-		    {
-		      if (mgr->check_satisfiability)
-			fprintf (mgr->out,
-				 "%% SATISFIABLE formula"
-				 " (satisfying assignment follows)\n");
-		      else
-			fprintf (mgr->out,
-				 "%% INVALID formula"
-				 " (falsifying assignment follows)\n");
-
-		      print_assignment (mgr);
-		    }
-		  else if (res == 20)
-		    {
-		      if (mgr->check_satisfiability)
-			fprintf (mgr->out, "%% UNSATISFIABLE formula\n");
-		      else
-			fprintf (mgr->out, "%% VALID formula\n");
-		    }
-		  else {
-		    fprintf (mgr->out, "%% UNKNOWN result\n");
-		  }
-		}
-	    }
-	}
+    else if (!strcmp(argv[i], "--picosat")) {
+      mgr->use_lingeling = 0;
+      mgr->use_picosat = 1;
+      mgr->use_depqbf = 0;
     }
-
-  if (mgr->verbose)
-    {
+#endif
 #ifdef LIMBOOLE_USE_LINGELING
-      if (mgr->lgl)
-	lglstats (mgr->lgl);
+    else if (!strcmp(argv[i], "--lingeling")) {
+      mgr->use_lingeling = 1;
+      mgr->use_picosat = 0;
+      mgr->use_depqbf = 0;
+    }
+#endif
+#ifdef LIMBOOLE_USE_DEPQBF
+    else if (!strcmp(argv[i], "--depqbf")) {
+      mgr->use_lingeling = 0;
+      mgr->use_picosat = 0;
+      mgr->use_depqbf = 1;
+    }
+#endif
+    else if (argv[i][0] == '-') {
+      fprintf(mgr->log, "*** invalid command line option '%s' (try '-h')\n",
+              argv[i]);
+      error = 1;
+    } else if (mgr->close_in) {
+      fprintf(mgr->log, "*** can not read more than two files (try '-h')\n");
+      error = 1;
+    } else if (!(file = fopen(argv[i], "r"))) {
+      fprintf(mgr->log, "*** could not read '%s'\n", argv[i]);
+      error = 1;
+    } else {
+      mgr->in = file;
+      mgr->name = argv[i];
+      mgr->close_in = 1;
+    }
+  }
+
+  assert(mgr->use_lingeling || mgr->use_picosat || mgr->use_depqbf);
+  assert(mgr->use_lingeling + mgr->use_picosat + mgr->use_depqbf == 1);
+
+  connect_solver(mgr);
+
+  if (!error && !done) {
+    next_token(mgr);
+#ifdef LIMBOOLE_USE_DEPQBF
+    if (mgr->use_depqbf)
+      error = !parse_prefix(mgr);
+#endif
+
+    error = !parse(mgr);
+
+    if (!error) {
+      if (pretty_print || mgr->qdump)
+      {
+        if(pretty_print)
+        pp(mgr);
+        if (mgr->qdump) {
+          fprintf(mgr->out, "c generated with pretty printer of DepQBF\n");
+#ifdef LIMBOOLE_USE_DEPQBF
+          qdpll_print(mgr->qdpll, mgr->out);
+#endif
+        }
+
+      }
+      else {
+        tseitin(mgr);
+        if (!mgr->dump) {
+#ifdef LIMBOOLE_USE_LINGELING
+          res = 0;
+          if (mgr->lgl)
+            res = lglsat(mgr->lgl);
 #endif
 #ifdef LIMBOOLE_USE_PICOSAT
-      if (mgr->picosat)
-	picosat_stats (mgr->picosat);
+          if (mgr->picosat)
+            res = picosat_sat(mgr->picosat, -1);
 #endif
+#ifdef LIMBOOLE_USE_DEPQBF
+          if (mgr->qdpll)
+            res = qdpll_sat(mgr->qdpll);
+#endif
+
+          if (res == 10) {
+            if(mgr->qdpll) {
+              fprintf (mgr->out, "%% TRUE FORMULA (satisfying assignment of outermost existential variables follows)\n");
+            } else {
+              if (mgr->check_satisfiability)
+                fprintf(mgr->out, "%% SATISFIABLE formula"
+                                  " (satisfying assignment follows)\n");
+              else
+                fprintf(mgr->out, "%% INVALID formula"
+                                  " (falsifying assignment follows)\n");
+            }
+
+            print_assignment(mgr);
+          } else if (res == 20) {
+            if(mgr->qdpll) {
+fprintf (mgr->out, "%% FALSE formula\n");
+            } else {
+            if (mgr->check_satisfiability)
+              fprintf(mgr->out, "%% UNSATISFIABLE formula\n");
+            else
+              fprintf(mgr->out, "%% VALID formula\n");
+            }
+          } else {
+            fprintf(mgr->out, "%% UNKNOWN result\n");
+          }
+        }
+      }
     }
-  release (mgr);
+  }
+
+  if (mgr->verbose) {
+#ifdef LIMBOOLE_USE_LINGELING
+    if (mgr->lgl)
+      lglstats(mgr->lgl);
+#endif
+#ifdef LIMBOOLE_USE_PICOSAT
+    if (mgr->picosat)
+      picosat_stats(mgr->picosat);
+#endif
+  }
+  release(mgr);
 
   return error != 0;
+}
+
+int limboole(int argc, char **argv) {
+  return limboole_extended (argc, argv, 0, "", 0);
 }

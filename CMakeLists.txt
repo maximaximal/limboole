@@ -23,8 +23,8 @@ add_executable(dimacs2boole ${DIMACS2BOOLE_SRCS})
 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Os)
 
-set_target_properties(limboole PROPERTIES COMPILE_DEFINITIONS "LIMBOOLE_USE_LINGELING")
-set_target_properties(dimacs2boole PROPERTIES COMPILE_DEFINITIONS "LIMBOOLE_USE_LINGELING")
+target_compile_definitions(limboole PRIVATE LIMBOOLE_USE_PICOSAT LIMBOOLE_USE_DEPQBF)
+target_compile_definitions(dimacs2boole PRIVATE LIMBOOLE_USE_PICOSAT LIMBOOLE_USE_DEPQBF)
 
 # =============================================
 # Setup VERSION
@@ -36,11 +36,13 @@ add_definitions(-DVERSION="${VERSION}")
 # Setup SAT backend linkage.
 # =============================================
 
-add_subdirectory(lingeling-bcj-78ebb86-180517)
+add_subdirectory(picosat-960)
+add_subdirectory(nenofex-version-1.1)
+add_subdirectory(depqbf-version-6.03)
 
-target_link_libraries(limboole lgl)
+target_link_libraries(limboole picosat qdpll)
 
-set_target_properties(limboole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s MODULARIZE=1 -s EXIT_RUNTIME=0 -s EXPORT_NAME='createLimbooleModule' -s EXPORTED_FUNCTIONS=['_limboole','_main'] -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain','cwrap']")
+set_target_properties(limboole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s MODULARIZE=1 -s EXIT_RUNTIME=0 -s EXPORT_NAME='createLimbooleModule' -s EXPORTED_FUNCTIONS=['_limboole_extended','_main'] -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain','cwrap']")
 set_target_properties(dimacs2boole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s MODULARIZE=1 -s EXPORT_NAME='createDimacsToBooleModule' -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain']")
 
 # =============================================
