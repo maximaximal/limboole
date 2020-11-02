@@ -1055,9 +1055,6 @@ tseitin (Mgr * mgr)
         fprintf(mgr->out, "c %d %s\n", p->idx, p->data.as_name);
     }
 
-    if (mgr->dump && p->type == VAR)
-      fprintf(mgr->out, "c %d %s\n", p->idx, p->data.as_name);
-
     switch (p->type) {
     case IFF:
       num_clauses += 4;
@@ -1553,8 +1550,8 @@ int limboole_extended(int argc, char **argv, int op, char *input,
     if (!error) {
       if (pretty_print || mgr->qdump)
       {
-        if(pretty_print)
-        pp(mgr);
+        if (pretty_print)
+          pp(mgr);
         if (mgr->qdump) {
           fprintf(mgr->out, "c generated with pretty printer of DepQBF\n");
 #ifdef LIMBOOLE_USE_DEPQBF
