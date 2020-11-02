@@ -13,17 +13,25 @@ set(LIMBOOLE_EXECUTABLE_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/limboole.c
     )
 
+set(TESTLIMBOOLE_EXECUTABLE_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/limboole.c
+    )
+
 set(DIMACS2BOOLE_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/dimacs2boole.c
     )
 
 add_executable(limboole ${LIMBOOLE_EXECUTABLE_SRCS})
 
+add_executable(testlimboole ${TESTLIMBOOLE_EXECUTABLE_SRCS})
+
 add_executable(dimacs2boole ${DIMACS2BOOLE_SRCS})
 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Os)
 
 target_compile_definitions(limboole PRIVATE LIMBOOLE_USE_PICOSAT LIMBOOLE_USE_DEPQBF)
+target_compile_definitions(testlimboole PRIVATE LIMBOOLE_USE_PICOSAT LIMBOOLE_USE_DEPQBF)
 target_compile_definitions(dimacs2boole PRIVATE LIMBOOLE_USE_PICOSAT LIMBOOLE_USE_DEPQBF)
 
 # =============================================
@@ -41,9 +49,12 @@ add_subdirectory(nenofex-version-1.1)
 add_subdirectory(depqbf-version-6.03)
 
 target_link_libraries(limboole picosat qdpll)
+target_link_libraries(testlimboole picosat qdpll)
 
-set_target_properties(limboole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s MODULARIZE=1 -s EXIT_RUNTIME=0 -s EXPORT_NAME='createLimbooleModule' -s EXPORTED_FUNCTIONS=['_limboole_extended','_main'] -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain','cwrap']")
-set_target_properties(dimacs2boole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s MODULARIZE=1 -s EXPORT_NAME='createDimacsToBooleModule' -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain']")
+if(CMAKE_CXX_COMPILER MATCHES "/em\\+\\+(-[a-zA-Z0-9.])?$")
+    set_target_properties(limboole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s MODULARIZE=1 -s EXIT_RUNTIME=0 -s EXPORT_NAME='createLimbooleModule' -s EXPORTED_FUNCTIONS=['_limboole_extended','_main'] -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain','cwrap']")
+    set_target_properties(dimacs2boole PROPERTIES LINK_FLAGS "-s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s MODULARIZE=1 -s EXPORT_NAME='createDimacsToBooleModule' -s EXTRA_EXPORTED_RUNTIME_METHODS=['FS','callMain']")
+endif()
 
 # =============================================
 # Install all targets

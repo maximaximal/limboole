@@ -570,30 +570,28 @@ enlarge_buffer (Mgr * mgr)
 
 /*------------------------------------------------------------------------*/
 
-static int
-next_char (Mgr * mgr)
-{
+static int next_char(Mgr *mgr) {
   int res;
 
   mgr->last_y = mgr->y;
 
-  if (mgr->saved_char_is_valid)
-    {
-      mgr->saved_char_is_valid = 0;
-      res = mgr->saved_char;
+  if (mgr->saved_char_is_valid) {
+    mgr->saved_char_is_valid = 0;
+    res = mgr->saved_char;
+  } else {
+    if (mgr->input == NULL) {
+      res = fgetc(mgr->in);
+    } else {
+      if (mgr->input_pos == mgr->input_length)
+        return EOF;
+      res = mgr->input[mgr->input_pos++];
     }
-  else {
-    if(mgr->input_pos == mgr->input_length) return EOF;
-
-    res = mgr->input[mgr->input_pos++];
   }
 
-  if (res == '\n')
-    {
-      mgr->x++;
-      mgr->y = 0;
-    }
-  else
+  if (res == '\n') {
+    mgr->x++;
+    mgr->y = 0;
+  } else
     mgr->y++;
 
   return res;
@@ -1320,7 +1318,7 @@ print_assignment (Mgr * mgr)
 #define LINGELING_USAGE \
 "  --lingeling    use Lingeling as SAT solver back-end (default)\n"
 #define DEPQBF_USAGE \
-"  --depqbf    use DepQBF as QBF solver back-end (disabled by default)\n"
+"  --depqbf       use DepQBF as QBF solver back-end (disabled by default)\n"
 #endif
 
 #if defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING) && !defined(LIMBOOLE_USE_DEPQBF)
@@ -1329,7 +1327,7 @@ print_assignment (Mgr * mgr)
 #define LINGELING_USAGE \
 "  --lingeling    use Lingeling as SAT solver back-end (default)\n"
 #define DEPQBF_USAGE \
-"  --depqbf    no support for DepQBF compiled in\n"
+"  --depqbf       no support for DepQBF compiled in\n"
 #endif
 
 #if !defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING) && defined(LIMBOOLE_USE_DEPQBF)
@@ -1338,7 +1336,7 @@ print_assignment (Mgr * mgr)
 #define LINGELING_USAGE \
 "  --lingeling    using Lingeling (as the only available SAT solver back-end)\n"
 #define DEPQBF_USAGE \
-"  --depqbf    use DepQBF as QBF solver back-end \n"
+"  --depqbf       use DepQBF as QBF solver back-end \n"
 #endif
 
 #if !defined(LIMBOOLE_USE_PICOSAT) && defined(LIMBOOLE_USE_LINGELING) && !defined(LIMBOOLE_USE_DEPQBF)
@@ -1347,7 +1345,7 @@ print_assignment (Mgr * mgr)
 #define LINGELING_USAGE \
 "  --lingeling    using Lingeling (as the only available SAT solver back-end)\n"
 #define DEPQBF_USAGE \
-"  --depqbf    no support for DepQBF built in \n"
+"  --depqbf       no support for DepQBF built in \n"
 #endif
 
 #if defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING) && defined(LIMBOOLE_USE_DEPQBF)
@@ -1356,7 +1354,7 @@ print_assignment (Mgr * mgr)
 #define LINGELING_USAGE \
 "  --lingeling    no support for Lingeling SAT solver compiled in\n"
 #define DEPQBF_USAGE \
-"  --depqbf    use DepQBF as QBF solver back-end\n"
+"  --depqbf       use DepQBF as QBF solver back-end\n"
 #endif
 
 #if defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING) && !defined(LIMBOOLE_USE_DEPQBF)
@@ -1365,7 +1363,7 @@ print_assignment (Mgr * mgr)
 #define LINGELING_USAGE \
 "  --lingeling    no support for Lingeling SAT solver compiled in\n"
 #define DEPQBF_USAGE \
-"  --depqbf    no support for DepQBF compiled in\n"
+"  --depqbf       no support for DepQBF compiled in\n"
 #endif
 
 #if !defined(LIMBOOLE_USE_PICOSAT) && !defined(LIMBOOLE_USE_LINGELING) && defined(LIMBOOLE_USE_DEPQBF)
@@ -1393,8 +1391,7 @@ print_assignment (Mgr * mgr)
 "  -p             pretty print input formula only\n" \
 "  -d             dump generated CNF only\n" \
 "  -s             check satisfiability with SAT Solvers \n "\
-"                       (default is to check validity; "\
-"                       option is not allowed for QBF solvers)\n" \
+"                       (default is to check validity)\n"\
 "  -o <out-file>  set output file (default <stdout>)\n" \
 "  -l <log-file>  set log file (default <stderr>)\n" \
 LINGELING_USAGE \
@@ -1468,11 +1465,6 @@ int limboole_extended(int argc, char **argv, int op, char *input,
       }
     } else if (!strcmp(argv[i], "-s")) {
       mgr->check_satisfiability = 1;
-      if (mgr->use_depqbf) {
-        fprintf(mgr->log, "-s option not allowed for QBF\n");
-        error = 1;
-      }
-
     } else if (!strcmp(argv[i], "-o")) {
       if (i == argc - 1) {
         fprintf(mgr->log, "*** argument to '-o' missing (try '-h')\n");
@@ -1634,5 +1626,5 @@ fprintf (mgr->out, "%% FALSE formula\n");
 }
 
 int limboole(int argc, char **argv) {
-  return limboole_extended (argc, argv, 0, "", 0);
+  return limboole_extended (argc, argv, 0, NULL, 0);
 }
