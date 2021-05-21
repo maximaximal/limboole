@@ -1297,14 +1297,16 @@ print_assignment (Mgr * mgr)
     val = lglderef (mgr->lgl, idx);
 #endif
 #ifdef LIMBOOLE_USE_DEPQBF
-      if (mgr->qdpll &&
-          qdpll_get_nesting_of_var(mgr->qdpll, idx) == mgr->outer) {
-        val = qdpll_get_value(mgr->qdpll, idx);
-      } else 
-	val = 0; 
+      if (mgr->qdpll) {
+        if (qdpll_get_nesting_of_var(mgr->qdpll, idx) == mgr->outer) {
+          val = qdpll_get_value(mgr->qdpll, idx);
+        } else {
+          val = 0;
+        }
+      }
 #endif
       n = mgr->idx2node[idx];
-      if ((n->type == VAR) && (val != 0))
+      if ((n->type == VAR) && (!mgr->qdpll || (mgr->qdpll && val != 0)))
         fprintf(mgr->out, "%s = %d\n", n->data.as_name, val > 0);
   }
 }

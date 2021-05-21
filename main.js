@@ -158,7 +158,7 @@ window.Wrappers = [
     new ProcessorWrapper(window.Processors[0], "Validity Check", 0 ),
     new ProcessorWrapper(window.Processors[0], "Satisfiability Check", 1),
     //new ProcessorWrapper(window.Processors[0], "QBF Validity Check", 2),
-    new ProcessorWrapper(window.Processors[0], "QBF Satisfiability Check", 2)
+    new ProcessorWrapper(window.Processors[0], "QBF Satisfiability Check", 3)
 ];
 
 let selector = document.getElementById("select_wrapper");
