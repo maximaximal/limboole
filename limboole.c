@@ -1300,10 +1300,11 @@ print_assignment (Mgr * mgr)
       if (mgr->qdpll &&
           qdpll_get_nesting_of_var(mgr->qdpll, idx) == mgr->outer) {
         val = qdpll_get_value(mgr->qdpll, idx);
-      }
+      } else 
+	val = 0; 
 #endif
       n = mgr->idx2node[idx];
-      if (n->type == VAR)
+      if ((n->type == VAR) && (val != 0))
         fprintf(mgr->out, "%s = %d\n", n->data.as_name, val > 0);
   }
 }
