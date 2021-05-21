@@ -157,8 +157,8 @@ window.LimbooleLoadedPromise.then(function() {
 window.Wrappers = [
     new ProcessorWrapper(window.Processors[0], "Validity Check", 0 ),
     new ProcessorWrapper(window.Processors[0], "Satisfiability Check", 1),
-    new ProcessorWrapper(window.Processors[0], "QBF Validity Check", 2),
-    new ProcessorWrapper(window.Processors[0], "QBF Satisfiability Check", 3)
+    //new ProcessorWrapper(window.Processors[0], "QBF Validity Check", 2),
+    new ProcessorWrapper(window.Processors[0], "QBF Satisfiability Check", 2)
 ];
 
 let selector = document.getElementById("select_wrapper");
@@ -183,7 +183,9 @@ function applyFromLocationHash() {
 
         let h = decodeURIComponent(window.location.hash);
 
-        selector.value = h.charAt(1);
+        let v = h.charAt(1);
+        if(v > 2) { v = 2; }
+        selector.value = v;
         input.value = h.substring(2);
 
         input.style.height = 'auto';
@@ -217,11 +219,52 @@ document.getElementById("input").onkeydown = function(e) {
     return true;
 };
 
+let inputDiv = document.getElementById("input");
+let inputDivHeaderStatus = document.getElementById("input_annotation");
+
+// File Reader taken from https://stackoverflow.com/a/11313902
+if (typeof window.FileReader === 'undefined') {
+    // No registering, as file reading is not possible!
+} else {
+    inputDivHeaderStatus.classList.remove("hide");
+    inputDivHeaderStatus.innerHTML = 'Drag&Drop ✓';
+
+    inputDiv.ondragover = function() {
+        this.classList.add('hover');
+        return false;
+    };
+    var endevcb = function() {
+        this.classList.remove('hover');
+        return false;
+    }
+    inputDiv.ondragend = endevcb;
+    inputDiv.onmouseleave = endevcb;
+
+    inputDiv.ondrop = function(e) {
+        this.classList.remove('hover');
+        e.preventDefault();
+
+        var file = e.dataTransfer.files[0],
+            reader = new FileReader();
+        reader.onload = function(event) {
+            inputDiv.value = event.target.result;
+            $(inputDiv).trigger('change');
+            window.run_();
+        };
+        console.log(file);
+        reader.readAsText(file);
+
+        return false;
+    };
+}
+
 $('textarea').each(function () {
     this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
 }).on('input change', function () {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
 });
+
+
 
 applyFromLocationHash();
