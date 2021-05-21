@@ -1,0 +1,6 @@
+(MoBo | GPU | CPU | HDD | Netzteil | Kabel)
+& !GPU
+& !HDD
+& !Netzteil
+& !Kabel
+& !MoBo 
