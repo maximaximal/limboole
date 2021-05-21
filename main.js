@@ -251,7 +251,6 @@ if (typeof window.FileReader === 'undefined') {
             $(inputDiv).trigger('change');
             window.run_();
         };
-        console.log(file);
         reader.readAsText(file);
 
         return false;
