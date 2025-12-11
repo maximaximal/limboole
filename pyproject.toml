@@ -11,7 +11,7 @@ license-files = [
   "depqbf-version-6.03/COPYING"
 ]
 name = "limboole"
-version = "1.3.1"
+version = "1.3.2"
 readme = {file = "README", content-type = "text/plain"}
 
 [project.urls]

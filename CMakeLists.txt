@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 project(limboole
-    VERSION 1.3.1)
+    VERSION 1.3.2)
 
 set(VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
