@@ -1649,8 +1649,8 @@ static unsigned int
 compute_constraint_lbd (QDPLL * qdpll, Constraint * c)
 {
   const unsigned int dec_level = qdpll->state.decision_level;
-  assert (dec_level != QDPLL_INVALID_DECISION_LEVEL);
-  char level_classes[dec_level + 2];
+  assert(dec_level != QDPLL_INVALID_DECISION_LEVEL);
+  char *level_classes = malloc(sizeof(char) * (dec_level + 2));
   memset (level_classes, 0, (dec_level + 2) * sizeof (char));
   unsigned int result = 0;
   Var *vars = qdpll->pcnf.vars;
@@ -1671,7 +1671,8 @@ compute_constraint_lbd (QDPLL * qdpll, Constraint * c)
     if (*cp)
       result++;
 
-  assert (result > 0);
+  assert(result > 0);
+  free(level_classes);
   return result;
 }
 
