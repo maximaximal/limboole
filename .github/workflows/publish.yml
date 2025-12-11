@@ -43,6 +43,7 @@ jobs:
         uses: pypa/cibuildwheel@v3.3.0
         env:
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
+          CIBW_BUILD: py38-*
         # Can also be configured directly, using `with:`
         # with:
         #   package-dir: .
