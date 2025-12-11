@@ -52,6 +52,7 @@ endif()
 # =============================================
 
 if(SKBUILD)
+  target_compile_definitions(picosat PUBLIC NGETRUSAGE)
   install(TARGETS limboole DESTINATION "${SKBUILD_SCRIPTS_DIR}")
   install(TARGETS dimacs2boole DESTINATION "${SKBUILD_SCRIPTS_DIR}")
 else()
