@@ -29,7 +29,6 @@
 #include <assert.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <sys/resource.h>
 #include "qdpll.h"
 #include "qdpll_mem.h"
 #include "qdpll_pcnf.h"
@@ -41,6 +40,9 @@
 #include "qdpll_config.h"
 #include "qdpll_dynamic_nenofex.h"
 #include <picosat.h>
+
+// Don't need this anymore in this portable version.
+#define time_stamp() 0
 
 #define QDPLL_ABORT_QDPLL(cond,msg)					\
   do {									\
@@ -1639,21 +1641,6 @@ print_bqrp_scope (Scope * scope)
 
 
 
-/* Get process time. Can be used for performance statistics. */
-static double
-time_stamp ()
-{
-  double result = 0;
-  struct rusage usage;
-
-  if (!getrusage (RUSAGE_SELF, &usage))
-    {
-      result += usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
-      result += usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
-    }
-
-  return result;
-}
 
 
 /* Compute 'literal block distance' of current constraint: partition
@@ -13780,9 +13767,7 @@ check_limits_and_abort(QDPLL *qdpll)
   else
     {
       if ((qdpll->options.max_dec && qdpll->state.num_decisions > qdpll->options.max_dec) || 
-          (qdpll->options.max_btracks && qdpll->state.num_backtracks > qdpll->options.max_btracks) || 
-          (qdpll->options.max_secs && 
-           (time_stamp() - qdpll->state.solving_start_time) > qdpll->options.max_secs))
+          (qdpll->options.max_btracks && qdpll->state.num_backtracks > qdpll->options.max_btracks))
         return 1;
       else 
         return 0;
@@ -15631,7 +15616,7 @@ solve (QDPLL * qdpll)
 #if COMPUTE_STATS
           unsigned int assumptions_passed_in_success = 0;
 #endif
-          double start_time = time_stamp ();
+          double start_time = 0;
           qdpll->state.trivial_falsity_tried++;
           VarID *vp, *ve;
           for (vp = qdpll->assigned_vars, ve = qdpll->assigned_vars_top; vp < ve; vp++)
@@ -15695,7 +15680,7 @@ solve (QDPLL * qdpll)
             {
 
             }
-          qdpll->state.trivial_falsity_time += (time_stamp () - start_time);
+          qdpll->state.trivial_falsity_time += (0 - start_time);
 
           if (qdpll->options.trivial_falsity_disable_calls_threshold > 0 && 
               qdpll->state.trivial_falsity_tried >= qdpll->options.trivial_falsity_disable_calls_threshold && 
