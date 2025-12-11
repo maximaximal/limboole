@@ -27,29 +27,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/resource.h>
 #include "qdpll_dynamic_nenofex.h"
 #include "qdpll_internals.h"
 #include "qdpll_pcnf.h"
 #include "qdpll_config.h"
 #include "nenofex.h"
 
-/* Get process time. Can be used for performance statistics. 
-   TODO: code also appears in 'qdpll.c', should be put in separate module. */
-static double
-time_stamp ()
-{
-  double result = 0;
-  struct rusage usage;
-
-  if (!getrusage (RUSAGE_SELF, &usage))
-    {
-      result += usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
-      result += usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
-    }
-
-  return result;
-}
+#define time_stamp() 0
 
 /* Returns nonzero iff scope 's' contains only assigned variables. */
 static int 

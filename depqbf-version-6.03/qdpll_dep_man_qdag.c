@@ -26,7 +26,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/resource.h>
 #include "qdpll_internals.h"
 #include "qdpll_pcnf.h"
 #include "qdpll_exit.h"
@@ -813,22 +812,7 @@ et_remove (EdgeTable * t, VarID var)
 
 /* -------------------- END: EDGE-HASHTABLE -------------------- */
 
-
-static double
-time_stamp ()
-{
-  double result = 0;
-  struct rusage usage;
-
-  if (!getrusage (RUSAGE_SELF, &usage))
-    {
-      result += usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
-      result += usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
-    }
-
-  return result;
-}
-
+#define time_stamp() 0
 
 /* -------------------- START: ASSERTION-ONLY CODE -------------------- */
 

@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <unistd.h>
 #include <ctype.h>
 #include "qdpll.h"
 #include "qdpll_mem.h"
