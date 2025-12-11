@@ -1,0 +1,24 @@
+[build-system]
+build-backend = "scikit_build_core.build"
+requires = ["scikit-build-core"]
+
+[project]
+authors = [{email = "mail+pypi@maxheisinger.at", name = "Max Heisinger"}, {email = "martina.seidl@jku.at", name = "Martina Seidl"}, {email = "biere@cs.uni-freiburg.de", name = "Armin Biere"}]
+description = "This is a simple boolean calculator.  It reads a boolean formula and checks whether it is valid.  In case '-s' is specified satisfiability is checked instead of validity (tautology)."
+license = "GPL-3.0-only"
+license-files = [
+  "LICENSE",
+  "depqbf-version-6.03/COPYING"
+]
+name = "limboole"
+version = "1.3"
+readme = {file = "README", content-type = "text/plain"}
+
+[project.urls]
+changelog = "https://github.com/maximaximal/limboole"
+homepage = "https://github.com/maximaximal/limboole"
+repository = "https://github.com/maximaximal/limboole"
+
+# This package does not link with Python, so we can save some builds.
+[tool.scikit-build]
+wheel.py-api = "py38"
