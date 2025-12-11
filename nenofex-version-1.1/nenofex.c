@@ -24,11 +24,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <limits.h>
-#include <unistd.h>
 #include <math.h>
 #include <dirent.h>
-#include <sys/types.h>
-#include <sys/resource.h>
 #include <picosat.h>
 #include "nenofex_types.h"
 #include "stack.h"
@@ -664,21 +661,7 @@ update_key (Stack * priority_heap, Var * var, int old_score)
 
 /* ---------- END: PRIORITY QUEUE ---------- */
 
-static double
-time_stamp ()
-{
-  double result = 0;
-  struct rusage usage;
-
-  if (!getrusage (RUSAGE_SELF, &usage))
-    {
-      result += usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
-      result += usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
-    }
-
-  return result;
-}
-
+#define time_stamp() 0
 
 /*
 - costs of vars on stack 'vars_marked_for_update' will be updated from scratch
